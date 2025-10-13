@@ -13,7 +13,7 @@ Changes:
 - If the correct key is pressed, call simpleKeyboard.turnOn();
 - If the incorrect key is pressed, utter `Press ${correctKey}` and call simpleKeyboard.turnOff();
 */
-let doReMiMode = false;
+let doReMiMode = true;
 let songIdx = 0;
 let challengeMode = false;
 
@@ -43,21 +43,42 @@ function runGame() {
   const ctx = canvas.getContext('2d');
 
   let keyIdx = 0;
-  let flatKeys = [];
+  let flatChords = [];
   let gameOver = false;
   let showConfetti = false;
   let sectionIdx = 0;
   let waitingForSpace = true;
+  let isReplaying = false;
 
-  function flattenKeys(song, sectionIdx) {
-    // Returns array of {row, col, key} for the current section
+  // Get chordMap from replay.js
+  const chordMap = {
+    '1': [60 - 12, 64, 67 - 12], // C E G
+    '2': [62 - 12, 65, 69 - 12], // D F A
+    '3': [64 - 12, 67, 71 - 12], // E G B
+    '4': [65 - 12, 69, 72 - 12], // F A C
+    '5': [67 - 12, 71, 74 - 12], // G B D
+    '6': [69 - 12, 72, 76 - 12], // A C E
+    '7': [71 - 12, 74, 77 - 12], // B D F
+  };
+
+  function flattenChords(song, sectionIdx) {
+    // Returns array of {row, col, chord} for the current section
     const arr = [];
-    const section = song.keys[sectionIdx];
-    section.forEach((row, rIdx) => {
-      row.split(' ').forEach((k, cIdx) => {
-        if (k !== '_') arr.push({ row: rIdx, col: cIdx, key: k });
+    if (!song.chords || !song.chords[sectionIdx]) return arr;
+    const section = song.chords[sectionIdx];
+    if (typeof section === 'string') {
+      // Handle flat chord array format
+      section.split(' ').forEach((k, cIdx) => {
+        if (k !== '_') arr.push({ row: 0, col: cIdx, chord: k });
       });
-    });
+    } else {
+      // Handle 2D array format
+      section.forEach((row, rIdx) => {
+        row.split(' ').forEach((k, cIdx) => {
+          if (k !== '_') arr.push({ row: rIdx, col: cIdx, chord: k });
+        });
+      });
+    }
     return arr;
   }
 
@@ -75,8 +96,7 @@ function runGame() {
   async function startSong() {
     waitingForSpace = false;
     keyIdx = 0;
-    flatKeys = flattenKeys(songs[songIdx], sectionIdx);
-    // Only render the "Press space" screen until replay is finished
+    flatChords = flattenChords(songs[songIdx], sectionIdx);
     renderPressSpace();
     const utter1 = new window.SpeechSynthesisUtterance('Listen to this!');
     window.speechSynthesis.cancel();
@@ -87,12 +107,18 @@ function runGame() {
       utter1.onerror = resolve;
       window.speechSynthesis.speak(utter1);
     });
-    await replay(songs[songIdx], {doReMiMode: doReMiMode});
-    render(); // Now render the actual song
+    await replay(songs[songIdx], {
+      doReMiMode: doReMiMode,
+      onProgress: idx => {
+        keyIdx = idx + 1;
+        render();
+      }
+    });
+    render();
     const utter2 = new window.SpeechSynthesisUtterance('Can you play it?');
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utter2);
-    window.addEventListener('keydown', handleKey);
+    window.addEventListener('keydown', handleChordKey);
   }
 
   // Add navigation buttons and challenge/DoReMi checkboxes
@@ -179,7 +205,7 @@ function runGame() {
         doReMiMode = doReMiBox.checked;
         setConfigToHash();
         render();
-        window.removeEventListener('keydown', handleKey);
+        window.removeEventListener('keydown', handleChordKey);
         window.removeEventListener('keydown', handleSpace);
         window.addEventListener('keydown', handleSpace);
       }
@@ -194,7 +220,7 @@ function runGame() {
         doReMiMode = doReMiBox.checked;
         setConfigToHash();
         render();
-        window.removeEventListener('keydown', handleKey);
+        window.removeEventListener('keydown', handleChordKey);
         window.removeEventListener('keydown', handleSpace);
         window.addEventListener('keydown', handleSpace);
       }
@@ -237,51 +263,39 @@ function runGame() {
     ctx.fillText(song.name, 40, 80);
 
     ctx.font = '60px monospace';
-    // Render only the current section
-    let section = song.keys[sectionIdx];
-    if (!section) {
-      section = song.keys[song.keys.length - 1];
+    // Render only the current section's chords
+    let section = song.chords ? (typeof song.chords[sectionIdx] === 'string' ? [song.chords[sectionIdx]] : song.chords[sectionIdx]) : [];
+    if (!section && song.chords) {
+      section = typeof song.chords[song.chords.length - 1] === 'string' ? [song.chords[song.chords.length - 1]] : song.chords[song.chords.length - 1];
     }
-    section.forEach((row, rIdx) => {
-      let y = 240 + rIdx * 96;
-      let x = 120;
-      row.split(' ').filter(k => k !== '').forEach((k, cIdx) => {
-        let highlight = false;
-        let played = false;
-        if (!gameOver && flatKeys[keyIdx] && flatKeys[keyIdx].row === rIdx && flatKeys[keyIdx].col === cIdx) {
-          highlight = true;
-        }
-        // In challenge mode, only show keys that have been played or are currently highlighted
-        if (challengeMode) {
-          // Find the index of this key in flatKeys
-          const idx = flatKeys.findIndex(obj => obj.row === rIdx && obj.col === cIdx);
-          played = idx > -1 && idx < keyIdx;
-          if (k !== '_' && played) {
-            ctx.fillStyle = 'black';
+    if (!section) section = [];
+
+    if (!challengeMode) {
+      let chordIndex = 0;
+      section.forEach((row, rIdx) => {
+        let y = 240 + rIdx * 96;
+        let x = 120;
+        const chords = typeof row === 'string' ? row.split(' ') : row.split(' ');
+        chords.forEach((k, cIdx) => {
+          // Color red if chordIndex <= keyIdx - 1
+          const isPlayed = chordIndex <= keyIdx - 1;
+          if (k !== '' && k !== '_') {
+            ctx.fillStyle = isPlayed ? 'red' : 'black';
             ctx.fillText(k, x, y);
-          } else if (k === '_' && played) {
-            ctx.fillStyle = 'gray';
-            ctx.fillText('_', x, y);
-          } else {
-            // Don't render unplayed keys
-          }
-        } else {
-          if (k !== '_') {
-            ctx.fillStyle = highlight ? 'red' : 'black';
-            ctx.fillText(k, x, y);
-          } else {
-            ctx.fillStyle = 'gray';
+          } else if (k === '_') {
+            ctx.fillStyle = isPlayed ? 'red' : 'gray';
             ctx.fillText('_', x, y);
           }
-        }
-        x += 120;
+          chordIndex++;
+          x += 120;
+        });
       });
-    });
+    }
 
     if (showConfetti) {
       ctx.font = '120px serif';
       ctx.fillStyle = 'orange';
-      ctx.fillText('🎉 🎉 🎉 🎉', 180, 210 + (song.keys[sectionIdx] || song.keys[song.keys.length - 1]).length * 96);
+      ctx.fillText('🎉 🎉 🎉 🎉', 180, 210 + (section.length) * 96);
     }
   }
 
@@ -289,8 +303,7 @@ function runGame() {
     showConfetti = false;
     const song = songs[songIdx];
     sectionIdx++;
-    if (sectionIdx >= song.keys.length) {
-      // Only show confetti and wait between songs
+    if (sectionIdx >= (song.chords ? song.chords.length : 1)) {
       setTimeout(() => {
         showConfetti = true;
         render();
@@ -300,47 +313,47 @@ function runGame() {
         if (typeof window.speechSynthesis !== "undefined") {
           const title = song.name.replace(/\s*\(.*?\)\s*$/, '');
           const exclamations = [
-          'Bless my soul! ',
-          'Bless my beard! ',
-          'Bless my eye brows! ',
-          'God bless the next generation! ',
-          'Amazing effort! ',
-          'What an effort! ',
-          'I cannot commend you enough for your dedication! ',
-          'No words can do justice to your work ethic! ',
-          'Hard work really works! ',
-          'Persistent practice really pays! ',
-          'Practice really makes possible! ',
-          'Mamma Mia! ',
-          'Ay caramba! ',
-          'Jesus! ',
-          'Jesus Christ! ',
-          'Oh, snap! ',
-          'My god! ',
-          'Holy Moly! ',
-          'Woo Hoo! ',
-          'Am I in a dream? ',
-          'Is this real? ',
-          'This is surreal! ',
-          'Are my eyes fooling me? ',
-          'How did you do that? ',
-          'Did you hear my jaw dropping! ',
-          'I am speechless! ',
-          'I do not know what to say! ',
-          'That is so cool! ',
-          'Brilliant achievement! ',
-          'Astounding feat! ',
-          'Fabulous job! ',
-          'Fantastic work! ',
-          'Oh my god! ',
-          'Oh my lord! ',
-          'My goodness! ',
-          'Goodness gracious! ',
-          'Well done! ',
-          'Way to go! ',
-          'Awesome work! ',
-          'Great job! ',
-        ];
+            'Bless my soul! ',
+            'Bless my beard! ',
+            'Bless my eye brows! ',
+            'God bless the next generation! ',
+            'Amazing effort! ',
+            'What an effort! ',
+            'I cannot commend you enough for your dedication! ',
+            'No words can do justice to your work ethic! ',
+            'Hard work really works! ',
+            'Persistent practice really pays! ',
+            'Practice really makes possible! ',
+            'Mamma Mia! ',
+            'Ay caramba! ',
+            'Jesus! ',
+            'Jesus Christ! ',
+            'Oh, snap! ',
+            'My god! ',
+            'Holy Moly! ',
+            'Woo Hoo! ',
+            'Am I in a dream? ',
+            'Is this real? ',
+            'This is surreal! ',
+            'Are my eyes fooling me? ',
+            'How did you do that? ',
+            'Did you hear my jaw dropping! ',
+            'I am speechless! ',
+            'I do not know what to say! ',
+            'That is so cool! ',
+            'Brilliant achievement! ',
+            'Astounding feat! ',
+            'Fabulous job! ',
+            'Fantastic work! ',
+            'Oh my god! ',
+            'Oh my lord! ',
+            'My goodness! ',
+            'Goodness gracious! ',
+            'Well done! ',
+            'Way to go! ',
+            'Awesome work! ',
+            'Great job! ',
+          ];
           const intros = [
             'What',
             'This is such',
@@ -408,7 +421,6 @@ function runGame() {
         render();
       }, 5000);
       setTimeout(() => {
-        // Move to next song
         songIdx++;
         sectionIdx = 0;
         if (songIdx >= songs.length) {
@@ -422,43 +434,38 @@ function runGame() {
       }, 5000);
       return;
     }
-    // Move to next section immediately (no confetti, no wait)
     keyIdx = 0;
-    flatKeys = flattenKeys(songs[songIdx], sectionIdx);
+    flatChords = flattenChords(songs[songIdx], sectionIdx);
     render();
-    window.addEventListener('keydown', handleKey);
+    window.addEventListener('keydown', handleChordKey);
   }
 
   let pressedKeys = {};
   let isUttering = false;
 
-  function handleKey(e) {
+  function handleChordKey(e) {
     if (gameOver) return;
-    if (isUttering) return;
-    if (pressedKeys[e.code]) return; // Ignore repeat while held
+    if (isReplaying) return;
+    if (pressedKeys[e.code]) return;
     pressedKeys[e.code] = true;
-    if (!flatKeys[keyIdx]) return;
-    const correctKey = flatKeys[keyIdx].key;
-    // Use Do Re Mi mode if checked
-    const speakKey = doReMiMode ? simplifyCharToDoReMi(correctKey) : simplifyCharTo123(correctKey);
-    if (e.key === correctKey) {
-      // Utter the key out loud
-      if (typeof window.speechSynthesis !== "undefined") {
-        const utter = new window.SpeechSynthesisUtterance(speakKey);
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(utter);
-      }
-      if (typeof simpleKeyboard !== "undefined" && simpleKeyboard.turnOn) {
-        simpleKeyboard.turnOn();
-      }
-      keyIdx++;
-      if (keyIdx >= flatKeys.length) {
-        // Section complete
-        window.removeEventListener('keydown', handleKey);
+    
+    if (chordMap[e.key]) {
+      isReplaying = true;
+      window.removeEventListener('keydown', handleChordKey);
+      // Replay melody only (no chords)
+      const song = songs[songIdx];
+      const melodyOnly = Object.assign({}, song);
+      delete melodyOnly.chords;
+      replay(melodyOnly, {
+        doReMiMode: doReMiMode,
+        onProgress: idx => {
+          keyIdx = idx + 1;
+          render();
+        }
+      }).then(() => {
         nextSectionOrSong();
-        return;
-      }
-      render();
+        isReplaying = false;
+      });
     }
   }
 

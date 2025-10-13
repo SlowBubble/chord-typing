@@ -87,7 +87,7 @@ window.onload = function () {
 		onsuccess: function() {
             console.log('Piano is loaded.');
             loadSound();
-            simpleKeyboard.connectKeyToKeyboard();
+            // simpleKeyboard.connectKeyToKeyboard();
 		}
 	});
 };

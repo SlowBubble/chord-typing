@@ -60,8 +60,9 @@ Given an item from songs, play each note
   - Utter the character the same time we play the note.
   */
  function replay(song, opts = {}) {
-  const noteDurMs = song.noteDurMs || 500;
+  const noteDurMs = song.noteDurMs || 700;
   const doReMiMode = opts.doReMiMode || false;
+  const onProgress = opts.onProgress;
 
   // Helper to flatten a section array into a sequence of notes (including '_')
   function flattenSections(sections) {
@@ -77,20 +78,33 @@ Given an item from songs, play each note
     return notes;
   }
 
+
   // Get main melody notes
   const notes = flattenSections(song.keys);
 
-  // Get comping notes (if any)
-  const compingNotes = song.comping ? flattenSections(song.comping) : null;
+  // Get chords (if any)
+  const chords = song.chords ? flattenSections(song.chords) : null;
 
-  // Determine the max length for parallel playback
-  const maxLen = Math.max(notes.length, compingNotes ? compingNotes.length : 0);
+  // Determine the max length for playback
+  const maxLen = Math.max(notes.length, chords ? chords.length : 0);
+
+  // Use chordMap from free-style-game.js
+  const chordMap = {
+    '1': [60 - 12, 64, 67 - 12], // C E G
+    '2': [62 - 12, 65, 69 - 12], // D F A
+    '3': [64 - 12, 67, 71 - 12], // E G B
+    '4': [65 - 12, 69, 72 - 12], // F A C
+    '5': [67 - 12, 71, 74 - 12], // G B D
+    '6': [69 - 12, 72, 76 - 12], // A C E
+    '7': [71 - 12, 74, 77 - 12], // B D F
+  };
 
   return new Promise(resolve => {
     let idx = 0;
     let prevNoteNumber = null;
-    let prevCompingNoteNumber = null;
+    let prevChordNotes = [];
     function playNext() {
+      if (onProgress) onProgress(idx);
       if (idx >= maxLen) {
         // Release last notes if any
         if (prevNoteNumber !== null) {
@@ -101,12 +115,14 @@ Given an item from songs, play each note
             velocity: 120,
           });
         }
-        if (prevCompingNoteNumber !== null) {
-          $(window).trigger('keyboardUp', {
-            time: new Date().getTime(),
-            noteNumber: prevCompingNoteNumber,
-            channel: 0,
-            velocity: 120,
+        if (prevChordNotes.length > 0) {
+          prevChordNotes.forEach(noteNumber => {
+            $(window).trigger('keyboardUp', {
+              time: new Date().getTime(),
+              noteNumber,
+              channel: 0,
+              velocity: 120,
+            });
           });
         }
         resolve();
@@ -118,8 +134,8 @@ Given an item from songs, play each note
       if (song.swing && idx % 2 === 1) {
         dur = noteDurMs * song.swing;
       }
-      // Comping
-      const compingChar = compingNotes ? (compingNotes[idx] || '_') : '_';
+      // Chord
+      const chordChar = chords ? (chords[idx] || '_') : '_';
 
       // Play main melody note
       if (noteChar !== '_') {
@@ -152,29 +168,32 @@ Given an item from songs, play each note
         }
       }
 
-      // Play comping note
-      if (compingChar !== '_') {
-        const compingNoteNumber = charToNoteNum[compingChar];
-        if (typeof compingNoteNumber !== "undefined") {
-          window.setTimeout(_ => {
-            if (prevCompingNoteNumber !== null) {
+      // Play chord
+      if (chordChar !== '_' && chordMap[chordChar]) {
+        window.setTimeout(_ => {
+          // Only release previous chord notes when a new chord is played
+          if (prevChordNotes.length > 0) {
+            prevChordNotes.forEach(noteNumber => {
               $(window).trigger('keyboardUp', {
                 time: new Date().getTime(),
-                noteNumber: prevCompingNoteNumber,
+                noteNumber,
                 channel: 0,
                 velocity: 80,
               });
-            }
+            });
+          }
+          chordMap[chordChar].forEach(noteNumber => {
             $(window).trigger('keyboardDown', {
               time: new Date().getTime(),
-              noteNumber: compingNoteNumber,
+              noteNumber,
               channel: 0,
               velocity: 60,
             });
-            prevCompingNoteNumber = compingNoteNumber;
-          }, 90);
-        }
+          });
+          prevChordNotes = chordMap[chordChar].slice();
+        }, 90);
       }
+      // Do NOT release chord notes if chordChar is '_'; keep them held until next chord
 
       idx++;
       setTimeout(playNext, dur);

@@ -15,14 +15,14 @@ const songs = [
       ],
     ],
     swing: 0.7,
-    comping: [
+    chords: [
       [
-        '_ _ _ _',
-        '_ 1 ` Tab',
-        'a z s d',
-        'f _ _ _',
+        '1 _ _ _',
+        '1 _ _ _',
+        '4 _ 5 _',
+        '1 _ _ _',
       ],
-    ],
+    ]
   },
   {
     name: 'Twinkle Twinkle Little Star (short)',
@@ -35,14 +35,14 @@ const songs = [
       ],
     ],
     swing: 0.8,
-    comping: [
+    chords: [
       [
-        '_ _ _ _',
-        '_ _ _ _',
-        'a _ s _',
-        'd s f _',
+        '1 _ _ _',
+        '4 _ 1 _',
+        '4 _ 1 _',
+        '5 _ 1 _',
       ],
-    ],
+    ]
   },
   {
     name: 'Lightly Row (short)',
@@ -55,14 +55,6 @@ const songs = [
       ],
     ],
     swing: 0.9,
-    comping: [
-      [
-        '_ _ _ _',
-        '_ _ _ _',
-        'f s ` Tab',
-        'z _ _ _',
-      ],
-    ],
   },
   {
     name: 'Aura Lee (short)',
@@ -75,14 +67,6 @@ const songs = [
       ],
     ],
     swing: 0.9,
-    comping: [
-      [
-        '_ _ _ _',
-        '_ _ _ _',
-        'r _ 4 _',
-        'w _ _ _',
-      ],
-    ],
   },
   {
     name: 'Hot Cross Buns',
@@ -99,18 +83,6 @@ const songs = [
       ],
     ],
     swing: 0.8,
-    comping: [
-      [
-        '_ _ _ _',
-        '_ _ _ _',
-        '_ _ _ _',
-        '_ _ _ _',
-        'f _ _ f',
-        'd s _ z',
-        'a s x d',
-        'f _ _ _',
-      ],
-    ],
   },
   {
     name: 'Long, Long Ago (short)',
@@ -141,17 +113,6 @@ const songs = [
       ],
     ],
     swing: 0.8,
-    comping: [
-      [
-        '_ _ _ _',
-        '_ _ _ _',
-        'a ` 1 2',
-        '3 ` z f',
-        'd _ _ _',
-        'g _ z _',
-        'a _ _ _',
-      ],
-    ],
   },
   {
     name: 'Jingle Bells (short)',
