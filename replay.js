@@ -93,10 +93,10 @@ Given an item from songs, play each note
     '1': [60 - 12, 64, 67 - 12], // C E G
     '2': [62 - 12, 65, 69 - 12], // D F A
     '3': [64 - 12, 67, 71 - 12], // E G B
-    '4': [65 - 12, 69, 72 - 12], // F A C
-    '5': [67 - 12, 71, 74 - 12], // G B D
-    '6': [69 - 12, 72, 76 - 12], // A C E
-    '7': [71 - 12, 74, 77 - 12], // B D F
+    '4': [65 - 24, 69, 72 - 24], // F A C
+    '5': [67 - 24, 71, 74 - 24], // G B D
+    '6': [69 - 24, 72, 76 - 24], // A C E
+    '7': [71 - 24, 74, 77 - 24], // B D F
   };
 
   return new Promise(resolve => {
@@ -139,8 +139,9 @@ Given an item from songs, play each note
 
       // Play main melody note
       if (noteChar !== '_') {
-        const noteNumber = charToNoteNum[noteChar];
+        let noteNumber = charToNoteNum[noteChar];
         if (typeof noteNumber !== "undefined") {
+          noteNumber += 12; // Play one octave higher than mapping
           // Utter the character at the same time
           if (typeof window.speechSynthesis !== "undefined") {
             const speakKey = doReMiMode ? simplifyCharToDoReMi(noteChar) : simplifyCharTo123(noteChar);
