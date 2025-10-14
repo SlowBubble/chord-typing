@@ -60,7 +60,7 @@ Given an item from songs, play each note
   - Utter the character the same time we play the note.
   */
  function replay(song, opts = {}) {
-  const noteDurMs = song.noteDurMs || 700;
+  const noteDurMs = (song.noteDurMs || 700) / (opts.noteSpeedRatio || 1.0);
   const doReMiMode = opts.doReMiMode || false;
   const onProgress = opts.onProgress;
 

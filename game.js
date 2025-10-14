@@ -16,6 +16,7 @@ Changes:
 let doReMiMode = true;
 let songIdx = 0;
 let challengeMode = false;
+let noteSpeedRatio = 1.0;
 
 function getConfigFromHash() {
   const hash = window.location.hash.replace(/^#/, '');
@@ -32,6 +33,7 @@ function setConfigToHash() {
   if (doReMiMode) params.push('doReMi=1');
   if (challengeMode) params.push('challenge=1');
   if (songIdx > 0) params.push('songIdx=' + songIdx);
+  if (noteSpeedRatio !== 1.0) params.push('noteSpeedRatio=' + noteSpeedRatio.toFixed(2));
   window.location.hash = params.join('&');
 }
 
@@ -109,6 +111,7 @@ function runGame() {
     });
     await replay(songs[songIdx], {
       doReMiMode: doReMiMode,
+      noteSpeedRatio: noteSpeedRatio,
       onProgress: idx => {
         keyIdx = idx + 1;
         render();
@@ -130,12 +133,16 @@ function runGame() {
     let challengeLabel = document.getElementById('challengeLabel');
     let doReMiBox = document.getElementById('doReMiCheckbox');
     let doReMiLabel = document.getElementById('doReMiLabel');
+    let speedSlider = document.getElementById('speedSlider');
+    let speedLabel = document.getElementById('speedLabel');
     if (prevBtn) prevBtn.remove();
     if (nextBtn) nextBtn.remove();
     if (challengeBox) challengeBox.remove();
     if (challengeLabel) challengeLabel.remove();
     if (doReMiBox) doReMiBox.remove();
     if (doReMiLabel) doReMiLabel.remove();
+    if (speedSlider) speedSlider.remove();
+    if (speedLabel) speedLabel.remove();
 
     prevBtn = document.createElement('button');
     prevBtn.id = 'prevSongBtn';
@@ -195,6 +202,29 @@ function runGame() {
     doReMiLabel.style.zIndex = 1000;
     doReMiLabel.style.fontSize = '24px';
 
+    speedSlider = document.createElement('input');
+    speedSlider.type = 'range';
+    speedSlider.id = 'speedSlider';
+    speedSlider.min = '0.3';
+    speedSlider.max = '2.5';
+    speedSlider.step = '0.1';
+    speedSlider.value = noteSpeedRatio;
+    speedSlider.style.position = 'fixed';
+    speedSlider.style.top = '160px';
+    speedSlider.style.right = '40px';
+    speedSlider.style.zIndex = 1000;
+    speedSlider.style.width = '180px';
+
+    speedLabel = document.createElement('label');
+    speedLabel.id = 'speedLabel';
+    speedLabel.htmlFor = 'speedSlider';
+    speedLabel.textContent = `Speed: ${noteSpeedRatio.toFixed(1)}x`;
+    speedLabel.style.position = 'fixed';
+    speedLabel.style.top = '160px';
+    speedLabel.style.right = '230px';
+    speedLabel.style.zIndex = 1000;
+    speedLabel.style.fontSize = '24px';
+
     prevBtn.onclick = () => {
       if (songIdx > 0) {
         songIdx--;
@@ -235,6 +265,11 @@ function runGame() {
       setConfigToHash();
       render();
     };
+    speedSlider.oninput = () => {
+      noteSpeedRatio = parseFloat(speedSlider.value);
+      speedLabel.textContent = `Speed: ${noteSpeedRatio.toFixed(1)}x`;
+      setConfigToHash();
+    };
 
     document.body.appendChild(prevBtn);
     document.body.appendChild(nextBtn);
@@ -242,6 +277,8 @@ function runGame() {
     document.body.appendChild(challengeLabel);
     document.body.appendChild(doReMiBox);
     document.body.appendChild(doReMiLabel);
+    document.body.appendChild(speedSlider);
+    document.body.appendChild(speedLabel);
   }
 
   function render() {
@@ -458,6 +495,7 @@ function runGame() {
       delete melodyOnly.chords;
       replay(melodyOnly, {
         doReMiMode: doReMiMode,
+        noteSpeedRatio: noteSpeedRatio,
         onProgress: idx => {
           keyIdx = idx + 1;
           render();
@@ -496,6 +534,9 @@ function runGame() {
   challengeMode = params.challenge === '1';
   if (params.songIdx && !isNaN(params.songIdx)) {
     songIdx = Math.max(0, Math.min(songs.length - 1, parseInt(params.songIdx, 10)));
+  }
+  if (params.noteSpeedRatio && !isNaN(params.noteSpeedRatio)) {
+    noteSpeedRatio = Math.max(0.4, Math.min(2.0, parseFloat(params.noteSpeedRatio)));
   }
 })();
 
