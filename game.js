@@ -51,6 +51,7 @@ function runGame() {
   let sectionIdx = 0;
   let waitingForSpace = true;
   let isReplaying = false;
+  let replayFinished = false;
 
   // Get chordMap from replay.js
   const chordMap = {
@@ -99,6 +100,7 @@ function runGame() {
     waitingForSpace = false;
     keyIdx = 0;
     flatChords = flattenChords(songs[songIdx], sectionIdx);
+    replayFinished = false;
     renderPressSpace();
     const utter1 = new window.SpeechSynthesisUtterance('Listen to this!');
     window.speechSynthesis.cancel();
@@ -117,6 +119,8 @@ function runGame() {
         render();
       }
     });
+    replayFinished = true;
+    keyIdx = 0;
     render();
     const utter2 = new window.SpeechSynthesisUtterance('Can you play it?');
     window.speechSynthesis.cancel();
@@ -314,8 +318,14 @@ function runGame() {
         let x = 120;
         const chords = typeof row === 'string' ? row.split(' ') : row.split(' ');
         chords.forEach((k, cIdx) => {
-          // Color red if chordIndex <= keyIdx - 1
-          const isPlayed = chordIndex <= keyIdx - 1;
+          let isPlayed;
+          if (replayFinished && keyIdx === 0) {
+            // After replay, only highlight the first token
+            isPlayed = chordIndex === 0;
+          } else {
+            // During replay, highlight up to keyIdx
+            isPlayed = chordIndex <= keyIdx - 1;
+          }
           if (k !== '' && k !== '_') {
             ctx.fillStyle = isPlayed ? 'red' : 'black';
             ctx.fillText(k, x, y);
