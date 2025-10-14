@@ -546,7 +546,7 @@ function runGame() {
     songIdx = Math.max(0, Math.min(songs.length - 1, parseInt(params.songIdx, 10)));
   }
   if (params.noteSpeedRatio && !isNaN(params.noteSpeedRatio)) {
-    noteSpeedRatio = Math.max(0.4, Math.min(2.0, parseFloat(params.noteSpeedRatio)));
+    noteSpeedRatio = Math.max(0.4, Math.min(2.5, parseFloat(params.noteSpeedRatio)));
   }
 })();
 
