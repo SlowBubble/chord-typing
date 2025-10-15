@@ -9,7 +9,7 @@ const chordMap = {
   '4': [65 - 24, 69, 72 - 24], // F A C
   '5': [67 - 24, 71, 74 - 24], // G B D
   '6': [69 - 24, 72, 76 - 24], // A C E
-  '7': [71 - 24, 74, 77 - 24], // B D F
+  '7': [71 - 24, 74, 81 - 24], // B D A
   // flats
   'q': [61 - 12, 65, 68 - 12], // Db F Ab
   'w': [63 - 12, 67, 70 - 12], // Eb G Bb
@@ -78,4 +78,5 @@ function simplifyCharToDoReMi(char) {
   if (char === '0') return 'Mi';
   if (char === '-') return 'Fa';
   if (char === '=') return 'So';
+  if (char === '\\') return 'La';
 }

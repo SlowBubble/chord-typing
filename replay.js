@@ -20,6 +20,8 @@ const charToNoteNum = {
   '-': 77,
   '[': 78,
   '=': 79,
+  ']': 80,
+  '\\': 81,
   // Extended lower notes
   Tab: 58,
   a: 57,
