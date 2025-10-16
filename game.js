@@ -496,7 +496,7 @@ function runGame() {
     if (pressedKeys[e.code]) return;
     pressedKeys[e.code] = true;
     
-    if (chordMap[e.key]) {
+    if (chordMap[e.key] || e.key === ' ') {
       isReplaying = true;
       window.removeEventListener('keydown', handleChordKey);
       // Replay melody only (no chords)
